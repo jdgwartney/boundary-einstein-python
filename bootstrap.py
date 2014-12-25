@@ -13,7 +13,7 @@ class Bootstrap:
                base='http://pypi.python.org/packages/source/v/virtualenv',
                python="python2",
                env="py",
-               requirements=None):
+               requirements="requirements.txt"):
     self.version = version
     self.base = base
     self.python = python
@@ -71,7 +71,7 @@ class Bootstrap:
     self.create()
     self.install()
     self.cleanup()
-    if self.requirements != None:
+    if os.path.isfile(self.requirements):
       self.install_libs()
 
 if __name__ == "__main__":
