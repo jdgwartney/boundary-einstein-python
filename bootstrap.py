@@ -6,36 +6,74 @@ import subprocess
 import tarfile
 import urllib
 
-VENV_VERSION = '1.9.1'
-PYPI_VENV_BASE = 'http://pypi.python.org/packages/source/v/virtualenv'
-PYTHON = 'python2'
-INITIAL_ENV = 'py-env0'
+class Bootstrap:
 
-def shellcmd(cmd, echo=True):
+  def __init__(self,
+               version="12.0.4",
+               base='http://pypi.python.org/packages/source/v/virtualenv',
+               python="python2",
+               env="py",
+               requirements=None):
+    self.version = version
+    self.base = base
+    self.python = python
+    self.env = env
+    self.dirname = 'virtualenv-' + self.version
+    self.tgz_file = self.dirname + '.tar.gz'
+    self.venv_url = self.base + '/' + self.tgz_file
+    self.requirements=requirements
+
+  def shellcmd(self,cmd,echo=False):
     """ Run 'cmd' in the shell and return its standard out.
     """
     if echo: print '[cmd] {0}'.format(cmd)
-    out = subprocess.check_output(cmd, stderr=sys.stderr, shell=True)
+    out = subprocess.check_output(cmd,stderr=sys.stderr,shell=True)
     if echo: print out
     return out
 
-dirname = 'virtualenv-' + VENV_VERSION
-tgz_file = dirname + '.tar.gz'
+  def download(self):
+    """ Fetch virtualenv from PyPI
+    """
+    urllib.urlretrieve(self.venv_url,self.tgz_file)
 
-# Fetch virtualenv from PyPI
-venv_url = PYPI_VENV_BASE + '/' + tgz_file
-urllib.urlretrieve(venv_url,tgz_file)
+  def extract(self):
+    """ Untar
+    """
+    tar = tarfile.open(self.tgz_file,"r:gz")
+    tar.extractall()
 
-# Untar
-tar = tarfile.open(tgz_file,"r:gz")
-tar.extractall()
+  def create(self):
+    """ Create the initial env
+    """
+    self.shellcmd('{0} {1}/virtualenv.py {2}'.format(self.python,self.dirname,self.env))
 
-# Create the initial env
-shellcmd('{0} {1}/virtualenv.py {2}'.format(PYTHON, dirname, INITIAL_ENV))
+  def install(self):
+    """Install the virtualenv package itself into the initial env
+    """
+    self.shellcmd('{0}/bin/pip install {1}'.format(self.env,self.tgz_file))
 
-# Install the virtualenv package itself into the initial env
-shellcmd('{0}/bin/pip install {1}'.format(INITIAL_ENV, tgz_file))
+  def install_libs(self):
+    """Install the virtualenv package itself into the initial env
+    """
+    self.shellcmd('{0}/bin/pip install -r {1}'.format(self.env,self.requirements))
 
-# Cleanup
-os.remove(tgz_file)
-shutil.rmtree(dirname)
+  def cleanup(self):
+    """ Cleanup
+    """
+    os.remove(self.tgz_file)
+    shutil.rmtree(self.dirname)
+
+  def setup(self):
+    """Bootraps a python environment
+    """
+    self.download()
+    self.extract()
+    self.create()
+    self.install()
+    self.cleanup()
+    if self.requirements != None:
+      self.install_libs()
+
+if __name__ == "__main__":
+  bootstrap = Bootstrap()
+  bootstrap.setup()
